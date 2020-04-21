@@ -5,10 +5,10 @@ from PIL import Image
 
 def compute_convolution(I, T, stride=None):
     '''
-    This function takes an image <I> and a template <T> (both numpy arrays) 
-    and returns a heatmap where each grid represents the output produced by 
-    convolution at each location. You can add optional parameters (e.g. stride, 
-    window_size, padding) to create additional functionality. 
+    This function takes an image <I> and a template <T> (both numpy arrays)
+    and returns a heatmap where each grid represents the output produced by
+    convolution at each location. You can add optional parameters (e.g. stride,
+    window_size, padding) to create additional functionality.
     '''
     (n_rows,n_cols,n_channels) = np.shape(I)
 
@@ -35,7 +35,7 @@ def predict_boxes(heatmap):
     '''
     BEGIN YOUR CODE
     '''
-    
+
     '''
     As an example, here's code that generates between 1 and 5 random boxes
     of fixed size and returns the results in the proper format.
@@ -68,12 +68,12 @@ def predict_boxes(heatmap):
 def detect_red_light_mf(I):
     '''
     This function takes a numpy array <I> and returns a list <output>.
-    The length of <output> is the number of bounding boxes predicted for <I>. 
-    Each entry of <output> is a list <[row_TL,col_TL,row_BR,col_BR,score]>. 
-    The first four entries are four integers specifying a bounding box 
-    (the row and column index of the top left corner and the row and column 
+    The length of <output> is the number of bounding boxes predicted for <I>.
+    Each entry of <output> is a list <[row_TL,col_TL,row_BR,col_BR,score]>.
+    The first four entries are four integers specifying a bounding box
+    (the row and column index of the top left corner and the row and column
     index of the bottom right corner).
-    <score> is a confidence score ranging from 0 to 1. 
+    <score> is a confidence score ranging from 0 to 1.
 
     Note that PIL loads images in RGB order, so:
     I[:,:,0] is the red channel
@@ -105,15 +105,15 @@ def detect_red_light_mf(I):
 
 # Note that you are not allowed to use test data for training.
 # set the path to the downloaded data:
-data_path = '../data/RedLights2011_Medium'
+data_path = './data/RedLights2011_Medium'
 
-# load splits: 
-split_path = '../data/hw02_splits'
+# load splits:
+split_path = './data/hw02_splits'
 file_names_train = np.load(os.path.join(split_path,'file_names_train.npy'))
 file_names_test = np.load(os.path.join(split_Path,'file_names_test.npy'))
 
 # set a path for saving predictions:
-preds_path = '../data/hw02_preds'
+preds_path = './data/hw02_preds'
 os.makedirs(preds_path, exist_ok=True) # create directory if needed
 
 # Set this parameter to True when you're done with algorithm development:
@@ -139,7 +139,7 @@ with open(os.path.join(preds_path,'preds_train.json'),'w') as f:
 
 if done_tweaking:
     '''
-    Make predictions on the test set. 
+    Make predictions on the test set.
     '''
     preds_test = {}
     for i in range(len(file_names_test)):
