@@ -75,6 +75,7 @@ file_names_test = np.load(os.path.join(split_path,'file_names_test.npy'))
 # Set this parameter to True when you're done with algorithm development:
 done_tweaking = True
 
+
 '''
 Load training data.
 '''
@@ -123,12 +124,12 @@ for iou_threshold in [0.5, 0.25, 0.75]:
         precisions.append(precision)
         recalls.append(recall)
 
-    ax.scatter(recalls, precisions, marker='.')
+    ax.plot(recalls, precisions, marker='.')
 plt.xlabel("recall")
 plt.ylabel("precision")
 plt.legend(["IoU_thr=0.5","IoU_thr=0.25","IoU_thr=0.75"])
 plt.title("PR curve for the training set of my best algorithm")
-plt.title("PR curve for the training set of the weakened version of my best algorithm")
+#plt.title("PR curve for the training set of the weakened version of my best algorithm")
 plt.show()
 
 # Plot training set PR curves
@@ -159,7 +160,7 @@ if done_tweaking:
             precisions.append(precision)
             recalls.append(recall)
 
-        ax.scatter(recalls, precisions, marker='o')
+        ax.plot(recalls, precisions, marker='o')
     plt.xlabel("recall")
     plt.ylabel("precision")
     plt.legend(["IoU_thr=0.5","IoU_thr=0.25","IoU_thr=0.75"])
