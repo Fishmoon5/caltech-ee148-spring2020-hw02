@@ -3,23 +3,51 @@ import numpy as np
 import json
 from PIL import Image
 
-def compute_convolution(I, T, stride=None):
+
+def compute_convolution(I, T, padding=False):
     '''
     This function takes an image <I> and a template <T> (both numpy arrays)
     and returns a heatmap where each grid represents the output produced by
     convolution at each location. You can add optional parameters (e.g. stride,
     window_size, padding) to create additional functionality.
+    Both I and T are 3-dim.
     '''
     (n_rows,n_cols,n_channels) = np.shape(I)
 
     '''
-    BEGIN YOUR CODE
+    MY CODE
     '''
-    heatmap = np.random.random((n_rows, n_cols))
+    t_height, t_width, t_channels = T.shape
+    assert(n_channels == t_channels)
 
-    '''
-    END YOUR CODE
-    '''
+    heatmap = np.zeros((n_rows, n_cols))
+    for channel in range(n_channels):
+    #for channel in range(1):  ## weakened version
+        T_sub = T[:,:,channel]
+        I_sub = I[:,:,channel]
+        T_sub = T_sub / np.linalg.norm(T_sub)
+
+        # padding, but not used in my best algorithm
+        if padding:
+            top_pad = int((t_height - 1) / 2)
+            bot_pad = t_height - 1 - top_pad
+            left_pad = int((t_width - 1) / 2)
+            right_pad = t_width - 1 - left_pad
+            I_sub = np.pad(I_sub, ((top_pad, bot_pad), (left_pad, right_pad)), constant_values=0)
+
+        I_strided = np.lib.stride_tricks.as_strided(I_sub,
+            (n_rows, n_cols, T_sub.shape[0], T_sub.shape[1]),
+            (I_sub.strides[0], I_sub.strides[1], I_sub.strides[0], I_sub.strides[1]))
+
+        I_norm = np.linalg.norm(I_strided, axis=(-2,-1))
+        I_norm = np.repeat(I_norm, T_sub.shape[0]*T_sub.shape[1])
+        I_norm = I_norm.reshape(n_rows, n_cols, T_sub.shape[0], T_sub.shape[1])
+        I_normed = I_strided / I_norm
+        corr = I_normed * T_sub
+        corr = np.sum(corr, (-2, -1))
+
+        heatmap += corr / 3
+        #heatmap += corr   ## Weakened version
 
     return heatmap
 
@@ -33,35 +61,43 @@ def predict_boxes(heatmap):
     output = []
 
     '''
-    BEGIN YOUR CODE
+    BEGIN MY CODE
     '''
 
-    '''
-    As an example, here's code that generates between 1 and 5 random boxes
-    of fixed size and returns the results in the proper format.
-    '''
+    box_height = 10
+    box_width = 10
 
-    box_height = 8
-    box_width = 6
+    # idx = np.argwhere(heatmap > threshold)
+    # if idx.shape[0] > 10:
+    #     idx = np.argwhere(heatmap > threshold_high)
+    # elif idx.shape[0] < 1:
+    #     idx = np.argwhere(heatmap > threshold_low)
+    idx = np.argwhere(heatmap > threshold_high)
+    num_boxes = idx.shape[0]
 
-    num_boxes = np.random.randint(1,5)
-
+    used_idx = []
     for i in range(num_boxes):
-        (n_rows,n_cols,n_channels) = np.shape(I)
-
-        tl_row = np.random.randint(n_rows - box_height)
-        tl_col = np.random.randint(n_cols - box_width)
+        tl_row = int(idx[i,0])
+        tl_col = int(idx[i,1])
         br_row = tl_row + box_height
         br_col = tl_col + box_width
+        score = float(np.mean(heatmap[tl_row:br_row, tl_col:br_col]))
 
-        score = np.random.random()
-
-        output.append([tl_row,tl_col,br_row,br_col, score])
+        is_new = 1
+        for j in used_idx:
+            tl_row0 = int(idx[j,0])
+            tl_col0 = int(idx[j,1])
+            if abs(tl_row0 - tl_row) <= box_height and abs(tl_col0 - tl_col) <= box_width:
+                is_new = 0
+                break
+        if is_new:
+            used_idx.append(i)
+            #print(idx[i,:], score)
+            output.append([tl_row,tl_col,br_row,br_col, score])
 
     '''
-    END YOUR CODE
+    END MY CODE
     '''
-
     return output
 
 
@@ -84,13 +120,18 @@ def detect_red_light_mf(I):
     '''
     BEGIN YOUR CODE
     '''
-    template_height = 8
-    template_width = 6
-
     # You may use multiple stages and combine the results
-    T = np.random.random((template_height, template_width))
+    T1 = Image.open('./redlight1.jpg')
+    T1 = np.asarray(T1)
+    heatmap1 = compute_convolution(I, T1)
 
-    heatmap = compute_convolution(I, T)
+    ## I have tried two stages, but the results are not as good.
+    # T2 = Image.open('./redlight2.jpg')
+    # T2 = np.asarray(T2)
+    # heatmap2 = compute_convolution(I, T2)
+    #
+    # heatmap = (heatmap1 + heatmap2) / 2
+    heatmap = heatmap1
     output = predict_boxes(heatmap)
 
     '''
@@ -110,21 +151,22 @@ data_path = './data/RedLights2011_Medium'
 # load splits:
 split_path = './data/hw02_splits'
 file_names_train = np.load(os.path.join(split_path,'file_names_train.npy'))
-file_names_test = np.load(os.path.join(split_Path,'file_names_test.npy'))
+file_names_test = np.load(os.path.join(split_path,'file_names_test.npy'))
 
 # set a path for saving predictions:
 preds_path = './data/hw02_preds'
 os.makedirs(preds_path, exist_ok=True) # create directory if needed
 
 # Set this parameter to True when you're done with algorithm development:
-done_tweaking = False
+done_tweaking = True
+threshold_high = 0.9
+##threshold_high = 0.88
 
 '''
 Make predictions on the training set.
 '''
 preds_train = {}
 for i in range(len(file_names_train)):
-
     # read image using PIL:
     I = Image.open(os.path.join(data_path,file_names_train[i]))
 
