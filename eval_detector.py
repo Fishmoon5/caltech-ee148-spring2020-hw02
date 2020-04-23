@@ -78,7 +78,8 @@ done_tweaking = True
 '''
 Load training data.
 '''
-with open(os.path.join(preds_path,'preds_train_redlight1_weakened.json'),'r') as f:
+with open(os.path.join(preds_path,'preds_train_redlight1.json'),'r') as f:
+#with open(os.path.join(preds_path,'preds_train_redlight1_weakened.json'),'r') as f:
     preds_train = json.load(f)
 
 with open(os.path.join(gts_path, 'annotations_train.json'),'r') as f:
@@ -89,8 +90,8 @@ if done_tweaking:
     '''
     Load test data.
     '''
-
-    with open(os.path.join(preds_path,'preds_test_redlight1_weakened.json'),'r') as f:
+    with open(os.path.join(preds_path,'preds_test_redlight1.json'),'r') as f:
+    #with open(os.path.join(preds_path,'preds_test_redlight1_weakened.json'),'r') as f:
         preds_test = json.load(f)
 
     with open(os.path.join(gts_path, 'annotations_test.json'),'r') as f:
@@ -99,62 +100,69 @@ if done_tweaking:
 
 # For a fixed IoU threshold, vary the confidence thresholds.
 # The code below gives an example on the training set for one IoU threshold.
+fig, ax = plt.subplots()
+for iou_threshold in [0.5, 0.25, 0.75]:
+    scores = []
+    for fname in preds_train:
+        if len(preds_train[fname]) != 0:
+            scores += list(np.array(preds_train[fname])[:,4])
+    confidence_thrs = np.sort(np.array(scores,dtype=float)) # using (ascending) list of confidence scores as thresholds
+    confidence_thrs = confidence_thrs[range(0, len(confidence_thrs), int(len(confidence_thrs)/20))]
+    tp_train = np.zeros(len(confidence_thrs))
+    fp_train = np.zeros(len(confidence_thrs))
+    fn_train = np.zeros(len(confidence_thrs))
+    for i, conf_thr in enumerate(confidence_thrs):
+        tp_train[i], fp_train[i], fn_train[i] = compute_counts(preds_train, gts_train, iou_thr=iou_threshold, conf_thr=conf_thr)
 
-scores = []
-for fname in preds_train:
-    if len(preds_train[fname]) != 0:
-        scores += list(np.array(preds_train[fname])[:,4])
-confidence_thrs = np.sort(np.array(scores,dtype=float)) # using (ascending) list of confidence scores as thresholds
-confidence_thrs = confidence_thrs[range(0, len(confidence_thrs), int(len(confidence_thrs)/20))]
-tp_train = np.zeros(len(confidence_thrs))
-fp_train = np.zeros(len(confidence_thrs))
-fn_train = np.zeros(len(confidence_thrs))
-for i, conf_thr in enumerate(confidence_thrs):
-    tp_train[i], fp_train[i], fn_train[i] = compute_counts(preds_train, gts_train, iou_thr=0.25, conf_thr=conf_thr)
+    precisions = []
+    recalls = []
+    for i in range(len(tp_train)):
+        precision = tp_train[i] / (tp_train[i] + fp_train[i])
+        recall = tp_train[i] / (tp_train[i] + fn_train[i])
+        #print(tp_train[i], fp_train[i], fn_train[i], precision, recall)
+        precisions.append(precision)
+        recalls.append(recall)
 
-precisions = []
-recalls = []
-for i in range(len(tp_train)):
-    precision = tp_train[i] / (tp_train[i] + fp_train[i])
-    recall = tp_train[i] / (tp_train[i] + fn_train[i])
-    #print(tp_train[i], fp_train[i], fn_train[i], precision, recall)
-    precisions.append(precision)
-    recalls.append(recall)
-
-plt.scatter(recalls, precisions, marker='^')
-#plt.show()
+    ax.scatter(recalls, precisions, marker='.')
+plt.xlabel("recall")
+plt.ylabel("precision")
+plt.legend(["IoU_thr=0.5","IoU_thr=0.25","IoU_thr=0.75"])
+plt.title("PR curve for the training set of my best algorithm")
+plt.title("PR curve for the training set of the weakened version of my best algorithm")
+plt.show()
 
 # Plot training set PR curves
 
 if done_tweaking:
     print('Code for plotting test set PR curves.')
-    scores = []
-    for fname in preds_test:
-        if len(preds_test[fname]) != 0:
-            scores += list(np.array(preds_test[fname])[:,4])
-    confidence_thrs = np.sort(np.array(scores,dtype=float)) # using (ascending) list of confidence scores as thresholds
-    #confidence_thrs = confidence_thrs[[0,10,20,30, -3,-2,-1]]
-    #print(confidence_thrs)
-    tp_test = np.zeros(len(confidence_thrs))
-    fp_test = np.zeros(len(confidence_thrs))
-    fn_test = np.zeros(len(confidence_thrs))
-    for i, conf_thr in enumerate(confidence_thrs):
-        tp_test[i], fp_test[i], fn_test[i] = compute_counts(preds_test, gts_test, iou_thr=0.5, conf_thr=conf_thr)
+    fig, ax = plt.subplots()
+    for iou_threshold in [0.5, 0.25, 0.75]:
+        scores = []
+        for fname in preds_test:
+            if len(preds_test[fname]) != 0:
+                scores += list(np.array(preds_test[fname])[:,4])
+        confidence_thrs = np.sort(np.array(scores,dtype=float)) # using (ascending) list of confidence scores as thresholds
+        #confidence_thrs = confidence_thrs[[0,10,20,30, -3,-2,-1]]
+        #print(confidence_thrs)
+        tp_test = np.zeros(len(confidence_thrs))
+        fp_test = np.zeros(len(confidence_thrs))
+        fn_test = np.zeros(len(confidence_thrs))
+        for i, conf_thr in enumerate(confidence_thrs):
+            tp_test[i], fp_test[i], fn_test[i] = compute_counts(preds_test, gts_test, iou_thr=iou_threshold, conf_thr=conf_thr)
 
-    precisions = []
-    recalls = []
-    for i in range(len(tp_test)):
-        precision = tp_test[i] / (tp_test[i] + fp_test[i])
-        recall = tp_test[i] / (tp_test[i] + fn_test[i])
-        #print(tp_test[i], fp_test[i], fn_test[i], precision, recall)
-        precisions.append(precision)
-        recalls.append(recall)
+        precisions = []
+        recalls = []
+        for i in range(len(tp_test)):
+            precision = tp_test[i] / (tp_test[i] + fp_test[i])
+            recall = tp_test[i] / (tp_test[i] + fn_test[i])
+            #print(tp_test[i], fp_test[i], fn_test[i], precision, recall)
+            precisions.append(precision)
+            recalls.append(recall)
 
-    plt.scatter(recalls, precisions, marker='o')
-
-plt.xlabel("recall")
-plt.ylabel("precision")
-plt.legend(["Train", "Test"])
-#plt.title("PR curve of my best algorithm")
-plt.title("PR curve of the weakened version of my best algorithm")
-plt.show()
+        ax.scatter(recalls, precisions, marker='o')
+    plt.xlabel("recall")
+    plt.ylabel("precision")
+    plt.legend(["IoU_thr=0.5","IoU_thr=0.25","IoU_thr=0.75"])
+    plt.title("PR curve for the test set of my best algorithm")
+    #plt.title("PR curve for the test set of the weakened version of my best algorithm")
+    plt.show()
